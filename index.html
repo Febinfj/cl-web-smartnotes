@@ -7,150 +7,44 @@
 
 <style>
 body {
-  margin: 0;
+  margin: 0; display: flex; height: 100vh;
   font-family: "Inter", sans-serif;
-  display: flex;
-  height: 100vh;
-  background: #111827;
-  color: #f3f4f6;
-  overflow: hidden;
+  background: #111827; color: #f3f4f6;
 }
-
-body.light {
-  background: #f3f4f6;
-  color: #1f2937;
-}
+body.light { background: #f3f4f6; color: #1f2937; }
 
 .sidebar {
-  width: 270px;
-  background: #1f2937;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  border-right: 2px solid #374151;
-  overflow-y: auto;
+  width: 250px; padding: 1rem; overflow-y: auto;
+  background: #1f2937; display: flex; flex-direction: column; gap: .7rem;
 }
+body.light .sidebar { background: #e5e7eb; }
 
-body.light .sidebar {
-  background: #e5e7eb;
-  border-right-color: #d1d5db;
+input, textarea, button {
+  padding: .6rem; border-radius: 6px; border: none;
+  font-size: .9rem; width: 100%;
 }
+input, textarea { background: #374151; color: #fff; }
+body.light input, body.light textarea { background: #d1d5db; color: #000; }
 
-.sidebar h2 {
-  margin: 0;
-  font-size: 1.4rem;
-}
+button { background: #6366f1; color: white; cursor: pointer; }
 
-button, input {
-  padding: 0.6rem;
-  border-radius: 6px;
-  border: none;
-  font-size: 0.9rem;
-}
-
-input {
-  width: 100%;
-  background: #374151;
-  color: #fff;
-}
-
-body.light input {
-  background: #d1d5db;
-  color: #000;
-}
-
-button {
-  background: #6366f1;
-  color: #fff;
-  cursor: pointer;
-  font-weight: 500;
-}
-
-button:hover {
-  opacity: 0.9;
-}
-
-.note-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
+.note-list { display: flex; flex-direction: column; gap: .4rem; }
 .note-item {
-  padding: 0.7rem;
-  background: #374151;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: 0.2s;
-  font-size: 0.85rem;
+  background: #374151; padding: .6rem; border-radius: 6px; cursor: pointer;
 }
-
-.note-item:hover {
-  background: #4b5563;
-}
-
-.note-item.active {
-  background: #6366f1;
-}
-
-body.light .note-item {
-  background: #cbd5e1;
-}
-body.light .note-item:hover {
-  background: #94a3b8;
-}
-body.light .note-item.active {
-  background: #6366f1;
-  color: white;
-}
+.note-item:hover { background: #4b5563; }
+.note-item.active { background: #6366f1; }
 
 .main {
-  flex: 1;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  flex: 1; padding: 1.2rem; display: flex; flex-direction: column; gap: .8rem;
 }
 
-.main-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.title-input, textarea {
+  resize: none; outline: none;
 }
+textarea { height: 55vh; }
 
-.editor {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-}
-
-textarea, .title-input {
-  width: 100%;
-  background: #1f2937;
-  border: none;
-  padding: 0.8rem;
-  border-radius: 6px;
-  color: #fff;
-  resize: none;
-}
-
-body.light textarea, body.light .title-input {
-  background: #e5e7eb;
-  color: #000;
-}
-
-.tags, .mood {
-  font-size: 0.85rem;
-  opacity: 0.7;
-}
-
-.highlight {
-  background: yellow;
-  color: black;
-  font-weight: bold;
-}
+.highlight { background: yellow; color: black; }
 </style>
 </head>
 
@@ -158,186 +52,144 @@ body.light textarea, body.light .title-input {
 
 <div class="sidebar">
   <h2>⚡ Storm Notes</h2>
-  <input type="text" id="searchBar" placeholder="Search...">
-  <button id="addBtn">+ New Note</button>
-  <button id="sortBtn">Sort: Newest</button>
-  <button id="themeBtn">Toggle Theme</button>
+  <input id="search" placeholder="Search...">
 
-  <div class="note-list" id="noteList"></div>
+  <button id="add">+ New</button>
+
+  <button id="sort" style="font-size:1.2rem;">↓</button>
+  <button id="theme" style="font-size:1.2rem;">🌙</button>
+
+  <div class="note-list" id="list"></div>
 </div>
 
 <div class="main">
-  <div class="main-header">
-    <h3 id="currentTitle">Select a note</h3>
-    <div>
-      <button id="saveBtn">Save</button>
-      <button id="deleteBtn">Delete</button>
-      <button id="pinBtn">Pin</button>
-    </div>
-  </div>
+  <h3 id="titleHead">Select a note</h3>
+  <input id="title" class="title-input" placeholder="Title" disabled>
+  <textarea id="content" placeholder="Start typing..." disabled></textarea>
+  <p id="info"></p>
 
-  <div class="editor">
-    <input class="title-input" id="titleInput" placeholder="Title..." disabled>
-    <textarea id="contentInput" placeholder="Start typing..." disabled></textarea>
-    <div class="tags" id="tagBox"></div>
-    <div class="mood" id="moodBox"></div>
+  <div>
+    <button id="save">Save</button>
+    <button id="del">Delete</button>
+    <button id="pin">Pin</button>
   </div>
 </div>
 
 <script>
 let notes = JSON.parse(localStorage.getItem("storm_notes") || "[]");
-let activeId = null;
-let newest = true;
+let active = null, newest = true;
 
-const get = id => document.getElementById(id);
+const g = id => document.getElementById(id);
 
-function saveAll() {
+function store() {
   localStorage.setItem("storm_notes", JSON.stringify(notes));
-  loadList();
+  renderList();
 }
 
-function aiSummary(text) {
-  return text.split(" ").slice(0, 10).join(" ") + (text.split(" ").length > 10 ? "..." : "");
-}
-
-function aiTags(text) {
-  let w = text.toLowerCase().match(/\b\w+\b/g) || [];
-  return [...new Set(w)].slice(0, 4);
-}
-
-function aiMood(text) {
-  if (/happy|good|great|fun/i.test(text)) return "😊";
-  if (/sad|angry|bad|hurt/i.test(text)) return "😢";
+function summary(t) { return t.split(" ").slice(0,10).join(" ") + "..."; }
+function tags(t) { return [...new Set((t.match(/\b\w+\b/g)||[]))].slice(0,4); }
+function mood(t) {
+  if (/happy|good|great/i.test(t)) return "😊";
+  if (/sad|bad|angry/i.test(t)) return "😢";
   return "😐";
 }
 
-function loadList() {
-  const list = get("noteList");
-  list.innerHTML = "";
-
-  let search = get("searchBar").value.toLowerCase();
+function renderList() {
+  let q = g("search").value.toLowerCase();
+  let list = g("list"); list.innerHTML = "";
 
   let filtered = notes.filter(n =>
-    n.title.toLowerCase().includes(search) ||
-    n.content.toLowerCase().includes(search)
+    n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)
   );
 
-  filtered.sort((a,b)=> newest ? b.id - a.id : a.id - b.id);
-  filtered.sort((a,b)=> b.pin - a.pin);
+  filtered.sort((a,b)=> newest?b.id-a.id:a.id-b.id);
+  filtered.sort((a,b)=> b.pin-a.pin);
 
-  filtered.forEach(note => {
-    let item = document.createElement("div");
-    item.className = "note-item" + (note.id === activeId ? " active" : "");
-    let title = note.title.toLowerCase().includes(search)
-      ? note.title.replace(new RegExp(search,"gi"), m => `<span class='highlight'>${m}</span>`)
-      : note.title;
-
-    item.innerHTML = (note.pin ? "📌 " : "") + title;
-    item.onclick = () => openNote(note.id);
-    list.appendChild(item);
+  filtered.forEach(n => {
+    let div = document.createElement("div");
+    div.className = "note-item" + (n.id===active ? " active":"");
+    let t = n.title.replace(new RegExp(q,"gi"), m=>`<span class='highlight'>${m}</span>`);
+    div.innerHTML = (n.pin?"📌 ":"") + t;
+    div.onclick = ()=> openNote(n.id);
+    list.appendChild(div);
   });
+
+  g("sort").innerText = newest ? "↓" : "↑";
 }
 
 function openNote(id) {
-  activeId = id;
-  let note = notes.find(n => n.id === id);
-
-  get("currentTitle").innerText = note.title;
-  get("titleInput").value = note.title;
-  get("contentInput").value = note.content;
-  get("tagBox").innerText = "Tags: " + note.tags.join(", ");
-  get("moodBox").innerText = "Mood: " + note.mood;
-
-  get("titleInput").disabled = false;
-  get("contentInput").disabled = false;
-
-  loadList();
+  active = id;
+  let n = notes.find(x=>x.id===id);
+  g("titleHead").innerText = n.title;
+  g("title").value = n.title;
+  g("content").value = n.content;
+  g("info").innerText = "Tags: " + n.tags.join(", ") + " | Mood: " + n.mood;
+  g("title").disabled = g("content").disabled = false;
+  renderList();
 }
 
 function addNote() {
-  let t = prompt("Title:");
-  if (!t) return;
-  let c = prompt("Content:");
-  if (!c) return;
+  let t = prompt("Title:"); if(!t) return;
+  let c = prompt("Content:"); if(!c) return;
 
-  let note = {
-    id: Date.now(),
-    title: t,
-    content: c,
-    summary: aiSummary(c),
-    tags: aiTags(c),
-    mood: aiMood(c),
-    pin: false
-  };
+  let n = { id: Date.now(), title:t, content:c, summary:summary(c),
+            tags:tags(c), mood:mood(c), pin:false };
 
-  notes.push(note);
-  activeId = note.id;
-  saveAll();
-  openNote(note.id);
+  notes.push(n); active = n.id; store(); openNote(n.id);
 }
 
 function saveNote() {
-  if (!activeId) return;
-  let n = notes.find(x => x.id === activeId);
-
-  n.title = get("titleInput").value;
-  n.content = get("contentInput").value;
-  n.summary = aiSummary(n.content);
-  n.tags = aiTags(n.content);
-  n.mood = aiMood(n.content);
-
-  saveAll();
-  openNote(activeId);
+  if(!active) return;
+  let n = notes.find(x=>x.id===active);
+  n.title = g("title").value;
+  n.content = g("content").value;
+  n.summary = summary(n.content);
+  n.tags = tags(n.content);
+  n.mood = mood(n.content);
+  store(); openNote(active);
 }
 
-function deleteNote() {
-  if (!activeId) return;
-  notes = notes.filter(n => n.id !== activeId);
-  activeId = null;
-  saveAll();
-  resetEditor();
+function delNote() {
+  notes = notes.filter(n=>n.id!==active);
+  active=null; store();
+  g("titleHead").innerText="Select a note";
+  g("title").value=g("content").value="";  
+  g("title").disabled=g("content").disabled=true;
+  g("info").innerText="";
 }
 
-function togglePin() {
-  if (!activeId) return;
-  let n = notes.find(x => x.id === activeId);
-  n.pin = !n.pin;
-  saveAll();
-  openNote(activeId);
+function pinNote() {
+  if(!active) return;
+  let n = notes.find(x=>x.id===active);
+  n.pin=!n.pin; store(); openNote(active);
 }
 
-function resetEditor() {
-  get("currentTitle").innerText = "Select a note";
-  get("titleInput").value = "";
-  get("contentInput").value = "";
-  get("tagBox").innerText = "";
-  get("moodBox").innerText = "";
-  get("titleInput").disabled = true;
-  get("contentInput").disabled = true;
-}
+g("add").onclick = addNote;
+g("save").onclick = saveNote;
+g("del").onclick = delNote;
+g("pin").onclick = pinNote;
 
-get("addBtn").onclick = addNote;
-get("saveBtn").onclick = saveNote;
-get("deleteBtn").onclick = deleteNote;
-get("pinBtn").onclick = togglePin;
-
-get("sortBtn").onclick = () => {
+g("sort").onclick = () => {
   newest = !newest;
-  get("sortBtn").innerText = newest ? "Sort: Newest" : "Sort: Oldest";
-  loadList();
+  g("sort").innerText = newest ? "↓" : "↑";
+  renderList();
 };
 
-get("themeBtn").onclick = () => {
+g("search").oninput = renderList;
+
+g("theme").onclick=()=>{
   document.body.classList.toggle("light");
-  localStorage.setItem("storm_theme", document.body.classList.contains("light") ? "light" : "dark");
+  const light = document.body.classList.contains("light");
+  g("theme").innerText = light ? "☀️" : "🌙";
+  localStorage.setItem("storm_theme", light ? "light" : "dark");
 };
 
-get("searchBar").oninput = loadList;
-
-if (localStorage.getItem("storm_theme") === "light")
+if(localStorage.getItem("storm_theme")==="light"){
   document.body.classList.add("light");
+  g("theme").innerText="☀️";
+}
 
-loadList();
+renderList();
 </script>
 
 </body>
