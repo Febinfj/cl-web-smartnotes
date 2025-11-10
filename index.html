@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Storm Notes</title>
+
+<style>
+:root {
+  --dark-bg: #0e1220;
+  --light-bg: #f2f4f8;
+  --dark-card: #1b2136;
+  --light-card: #ffffff;
+  --dark-text: #eef1ff;
+  --light-text: #1a1d2b;
+  --accent: #6a5cff;
+}
+
+body {
+  margin: 0;
+  padding: 2rem;
+  font-family: "Poppins", sans-serif;
+  background: var(--dark-bg);
+  color: var(--dark-text);
+  transition: 0.3s ease-in-out;
+}
+
+body.light {
+  background: var(--light-bg);
+  color: var(--light-text);
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 1.2rem;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+
+input, textarea {
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  border: none;
+  outline: none;
+  background: rgba(255,255,255,0.1);
+  color: inherit;
+}
+
+body.light input, body.light textarea {
+  background: #e7e7e7;
+  color: #000;
+}
+
+button {
+  padding: 0.55rem 0.9rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+button:hover {
+  opacity: 0.9;
+}
+
+#notesPanel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.note {
+  background: var(--dark-card);
+  color: var(--dark-text);
+  padding: 1rem;
+  border-radius: 10px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+  position: relative;
+  transition: 0.2s ease;
+}
+.note:hover { transform: translateY(-4px); }
+
+body.light .note {
+  background: var(--light-card);
+  color: var(--light-text);
+}
+
+.note-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.note-summary {
+  font-size: 0.9rem;
+  opacity: 0.75;
+  margin: 0.4rem 0;
+}
+
+.note-tags {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tag {
+  background: var(--accent);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+}
+
+.actions {
+  margin-top: 0.6rem;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+}
+
+.highlight {
+  background: yellow;
+  color: black;
+  font-weight: 700;
+}
+</style>
+</head>
+
+<body>
+
+<h1>⚡ Storm Notes</h1>
+
+<div class="controls">
+  <input type="text" id="searchBar" placeholder="Search notes...">
+  <button id="newNote">Add Note</button>
+  <button id="sortBtn">Sort: Newest</button>
+  <button id="modeBtn">Toggle Theme</button>
+</div>
+
+<div id="notesPanel"></div>
+
+<script>
+let notesDB = JSON.parse(localStorage.getItem('storm_notes') || "[]");
+let newestFirst = true;
+
+const panel = document.getElementById("notesPanel");
+const searchBar = document.getElementById("searchBar");
+
+const saveNotes = () => {
+  localStorage.setItem('storm_notes', JSON.stringify(notesDB));
+  renderNotes();
+};
+
+const autoSummary = text => {
+  const words = text.split(" ");
+  return words.slice(0, 12).join(" ") + (words.length > 12 ? "..." : "");
+};
+
+const autoTags = text => {
+  const w = text.toLowerCase().match(/\b[a-z0-9]+\b/g) || [];
+  const unique = [...new Set(w)];
+  return unique.slice(0, 3);
+};
+
+const detectMood = text => {
+  if (/happy|great|love|fun/i.test(text)) return "😊";
+  if (/sad|angry|upset|hurt/i.test(text)) return "😢";
+  return "😐";
+};
+
+function renderNotes() {
+  panel.innerHTML = "";
+  const query = searchBar.value.toLowerCase();
+
+  let filtered = notesDB.filter(note =>
+    note.title.toLowerCase().includes(query) ||
+    note.content.toLowerCase().includes(query)
+  );
+
+  filtered.sort((a,b) => newestFirst ? b.id - a.id : a.id - b.id);
+
+  filtered.forEach(note => {
+    const item = document.createElement("div");
+    item.className = "note";
+
+    const highlight = (text) =>
+      text.replace(new RegExp(query, "gi"), match => `<span class='highlight'>${match}</span>`);
+
+    item.innerHTML = `
+      <div class="note-title">${note.pin ? "📌 " : ""}${highlight(note.title)}</div>
+      <div class="note-summary">${highlight(note.summary)}</div>
+      <div class="note-tags">
+        ${note.tags.map(t => `<span class="tag">${t}</span>`).join("")}
+      </div>
+      <div class="actions">
+        <span>${note.mood}</span>
+        <div>
+          <button onclick="editNote(${note.id})">Edit</button>
+          <button onclick="deleteNote(${note.id})">Delete</button>
+          <button onclick="togglePin(${note.id})">${note.pin ? "Unpin" : "Pin"}</button>
+        </div>
+      </div>
+    `;
+    panel.appendChild(item);
+  });
+
+  if (!filtered.length) {
+    panel.innerHTML = "<p style='text-align:center;opacity:0.6;'>No matching notes.</p>";
+  }
+}
+
+function addNote() {
+  const title = prompt("Title:");
+  if (!title) return;
+  const content = prompt("Content:");
+  if (!content) return;
+
+  const obj = {
+    id: Date.now(),
+    title,
+    content,
+    summary: autoSummary(content),
+    tags: autoTags(content),
+    mood: detectMood(content),
+    pin: false
+  };
+
+  notesDB.push(obj);
+  saveNotes();
+}
+
+function editNote(id) {
+  const n = notesDB.find(x => x.id === id);
+  const t = prompt("Edit title:", n.title);
+  const c = prompt("Edit content:", n.content);
+
+  if (t !== null) n.title = t;
+  if (c !== null) {
+    n.content = c;
+    n.summary = autoSummary(c);
+    n.tags = autoTags(c);
+    n.mood = detectMood(c);
+  }
+  saveNotes();
+}
+
+function deleteNote(id) {
+  notesDB = notesDB.filter(x => x.id !== id);
+  saveNotes();
+}
+
+function togglePin(id) {
+  const n = notesDB.find(x => x.id === id);
+  n.pin = !n.pin;
+  notesDB.sort((a,b) => (b.pin - a.pin) || (newestFirst ? b.id - a.id : a.id - b.id));
+  saveNotes();
+}
+
+document.getElementById("newNote").onclick = addNote;
+
+document.getElementById("sortBtn").onclick = () => {
+  newestFirst = !newestFirst;
+  document.getElementById("sortBtn").innerText =
+    newestFirst ? "Sort: Newest" : "Sort: Oldest";
+  renderNotes();
+};
+
+document.getElementById("modeBtn").onclick = () => {
+  document.body.classList.toggle("light");
+  localStorage.setItem("storm_theme",
+    document.body.classList.contains("light") ? "light" : "dark");
+};
+
+searchBar.addEventListener("input", renderNotes);
+
+if (localStorage.getItem("storm_theme") === "light") {
+  document.body.classList.add("light");
+}
+
+renderNotes();
+</script>
+
+</body>
+</html>
